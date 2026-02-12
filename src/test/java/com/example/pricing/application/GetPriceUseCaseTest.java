@@ -1,20 +1,20 @@
 package com.example.pricing.application;
 
-import com.example.pricing.domain.model.Price;
-import com.example.pricing.domain.port.PriceRepository;
-import org.junit.jupiter.api.Test;
-
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import org.junit.jupiter.api.Test;
+
+import com.example.pricing.domain.model.Price;
+import com.example.pricing.domain.port.PriceRepository;
 
 class GetPriceUseCaseTest {
 
     private final PriceRepository priceRepository = (brandId, productId, applicationDate) -> {
-        // In-memory stub
+        // In-memory stub that respects date filtering as per the query contract
         Price p1 = new Price(
                 1L, 35455L, 1L,
                 LocalDateTime.of(2020, 6, 14, 0, 0, 0),
@@ -31,7 +31,12 @@ class GetPriceUseCaseTest {
                 new BigDecimal("25.45"),
                 "EUR"
         );
-        return List.of(p1, p2);
+        
+        // Filter prices that are applicable at the given date (matching query behavior)
+        return List.of(p1, p2).stream()
+                .filter(p -> (applicationDate.isEqual(p.getStartDate()) || applicationDate.isAfter(p.getStartDate()))
+                        && (applicationDate.isBefore(p.getEndDate()) || applicationDate.isEqual(p.getEndDate())))
+                .toList();
     };
 
     private final GetPriceUseCase useCase = new GetPriceUseCase(priceRepository);
@@ -57,30 +62,12 @@ class GetPriceUseCaseTest {
     }
 
     @Test
-    void shouldFilterByDateRangeUsingStreams() {
-        LocalDateTime testDate = LocalDateTime.of(2020, 6, 14, 10, 0, 0);
-
-        List<Price> allPrices = priceRepository.findByBrandProductAndDate(1L, 35455L, testDate);
-
-        long applicableCount = allPrices.stream()
-                .filter(p -> p.isApplicableAt(testDate))
-                .count();
-
-        assertThat(applicableCount).isEqualTo(1);
-    }
-
-    @Test
-    void shouldSelectMaxPriorityUsingStreams() {
+    void shouldSelectMaxPriorityBasedOnApplicablePrices() {
         LocalDateTime testDate = LocalDateTime.of(2020, 6, 14, 16, 0, 0);
 
-        List<Price> allPrices = priceRepository.findByBrandProductAndDate(1L, 35455L, testDate);
+        Optional<Price> result = useCase.getApplicablePrice(1L, 35455L, testDate);
 
-        Optional<Integer> maxPriority = allPrices.stream()
-                .filter(p -> p.isApplicableAt(testDate))
-                .map(Price::getPriority)
-                .max(Integer::compareTo);
-
-        assertThat(maxPriority).isPresent();
-        assertThat(maxPriority.get()).isEqualTo(1);
+        assertThat(result).isPresent();
+        assertThat(result.get().getPriority()).isEqualTo(1);
     }
 }

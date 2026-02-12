@@ -1,11 +1,11 @@
 package com.example.pricing.application;
 
-import com.example.pricing.domain.model.Price;
-import com.example.pricing.domain.port.PriceRepository;
-
 import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.Optional;
+
+import com.example.pricing.domain.model.Price;
+import com.example.pricing.domain.port.PriceRepository;
 
 public class GetPriceUseCase {
 
@@ -25,7 +25,6 @@ public class GetPriceUseCase {
 
         return priceRepository.findByBrandProductAndDate(brandId, productId, applicationDate)
                 .stream()
-                .filter(p -> p.isApplicableAt(applicationDate))
                 .max(Comparator.comparingInt(Price::getPriority));
     }
 }
