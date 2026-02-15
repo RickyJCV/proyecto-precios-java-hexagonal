@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.method.annotation.MethodArgumentTypeMismatchException;
 
+import com.example.pricing.infrastructure.exception.PriceNotFoundException;
 import com.example.pricing.infrastructure.rest.dto.ErrorResponseDto;
 
 @ControllerAdvice
@@ -53,6 +54,16 @@ public class GlobalExceptionHandler {
                 details
         );
         return ResponseEntity.badRequest().body(errorResponse);
+    }
+
+    @ExceptionHandler(PriceNotFoundException.class)
+    public ResponseEntity<ErrorResponseDto> handlePriceNotFound(PriceNotFoundException ex) {
+        ErrorResponseDto errorResponse = new ErrorResponseDto(
+                HttpStatus.NOT_FOUND.value(),
+                "Price Not Found",
+                ex.getMessage()
+        );
+        return ResponseEntity.status(HttpStatus.NOT_FOUND).body(errorResponse);
     }
 
     @ExceptionHandler(Exception.class)
